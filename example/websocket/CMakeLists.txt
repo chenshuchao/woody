@@ -1,0 +1,5 @@
+SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+
+ADD_EXECUTABLE(server server.cc)
+TARGET_LINK_LIBRARIES(server woody muduo_net muduo_base pthread)
+

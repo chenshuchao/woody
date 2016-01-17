@@ -1,30 +1,27 @@
+#include "woody/websocket/websocket_message.h"
+
 #include "woody/base/base_util.h"
 #include "woody/base/endian_util.h"
-#include "woody/websocket/websocket_message.h"
 
 using namespace std;
 using namespace woody;
 
-void WebsocketMessage::Append(string& data)
-{
+void WebsocketMessage::Append(string& data) {
   data_.append(data);
 }
 
-void WebsocketMessage::CleanUp()
-{
+void WebsocketMessage::CleanUp() {
   data_.clear();
 }
 
-bool WebsocketMessage::SingleFrame(WebsocketFrame& frame) const
-{
+bool WebsocketMessage::SingleFrame(WebsocketFrame& frame) const {
   int fin = 1;
   int rsv1 = 0;
   int rsv2 = 0;
   int rsv3 = 0;
   int opcode = -1;
   int mask = 0;  // Server must not send any masked frame to client.
-  switch (type_)
-  {
+  switch (type_) {
     case kNoneMessage: {
       return false;
     }
@@ -54,11 +51,9 @@ bool WebsocketMessage::SingleFrame(WebsocketFrame& frame) const
   }
   uint32_t masking_key = 0;
   string body = data_;
-  if (mask && !body.empty())
-  {
+  if (mask && !body.empty()) {
     unsigned char bytes[4];
-    for (int i = 0; i < 4; i ++)
-    {
+    for (int i = 0; i < 4; i ++) {
       bytes[i] = GetRandomByte();
     }
     masking_key = NetworkToHost32(*(uint32_t*)&bytes);

@@ -1,8 +1,8 @@
+#include "woody/base/ssl_util.h"
+
 #include <boost/uuid/sha1.hpp>
 #include <iostream>
 #include <string.h>
-
-#include "ssl_util.h"
 
 using namespace std;
 

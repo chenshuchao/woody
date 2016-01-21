@@ -3,26 +3,25 @@
 #include <muduo/net/InetAddress.h>
 
 #include <fstream>
-
-#include "woody/base_server.h"
-#include "woody/websocket/websocket_handler.h"
+#include <boost/pointer_cast.hpp>
+#include "woody/websocket/websocket_server.h"
 
 using namespace std;
 using namespace woody;
 
-class SimpleWebsocketHandler : public WebsocketHandler {
+class SimpleWebsocketServer : public WebsocketServer {
  public:
-  SimpleWebsocketHandler(const string& name,
-                         const muduo::net::TcpConnectionPtr& conn)
-    : WebsocketHandler(name, conn) {
+  SimpleWebsocketServer(muduo::net::EventLoop& loop,
+                        int port,
+                        const string& name)
+      : WebsocketServer(loop, port, name) {
   }
-  ~SimpleWebsocketHandler() { }
-
-  void HandleRequest(const HTTPRequest& req) {
+  void HandleRequest(const WebsocketHandlerPtr& handler,
+                     const HTTPRequest& req) {
     LOG_INFO << "WebsocketHandler HandleRequest";
     if(req.IsUpgrade()) {
       LOG_INFO << "WebsocketHandler upgrade";
-      HandleUpgradeRequest(req);
+      handler->HandleUpgradeRequest(req);
       return;
     }
     // handle unupgrade request.
@@ -35,23 +34,16 @@ class SimpleWebsocketHandler : public WebsocketHandler {
       resp.SetStatus(200, "OK")
           .AddHeader("Content-Type", "text/html")
           .AddBody(content);
-      SendResponse(resp);
+      handler->SendResponse(resp);
       return;
     }
   }
 
-  void HandleWebsocket(const WebsocketMessage& message) {
+  void HandleWebsocket(const WebsocketHandlerPtr& handler,
+                       const WebsocketMessage& message) {
     if (message.GetType() == WebsocketMessage::kTextMessage) {
-      SendWebsocketMessage(message);
+      handler->SendWebsocketMessage(message);
     }
-  }
-};
-
-class SimpleWebsocketHandlerFactory : public BaseHandlerFactory {
- public:
-  SimpleWebsocketHandler* CreateHandler(const string& name,
-                const muduo::net::TcpConnectionPtr& conn) {
-    return new SimpleWebsocketHandler(name, conn);
   }
 };
 
@@ -59,10 +51,7 @@ int main() {
   muduo::Logger::setLogLevel(muduo::Logger::DEBUG);
   muduo::net::EventLoop loop;
 
-  BaseServer server(loop,
-                    5011,
-                    new SimpleWebsocketHandlerFactory(),
-                    "simple_server");
+  SimpleWebsocketServer server(loop, 5011, "simple_server");
   server.Start();
   loop.loop();
 }

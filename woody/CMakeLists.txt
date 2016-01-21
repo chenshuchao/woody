@@ -4,7 +4,6 @@ ADD_SUBDIRECTORY(http)
 ADD_SUBDIRECTORY(websocket)
 
 SET(woody_SRCS
-  base_server.cc
   tcp_server.cc
   )
 

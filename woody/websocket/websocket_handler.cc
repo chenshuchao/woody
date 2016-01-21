@@ -9,17 +9,22 @@ using namespace woody;
 
 WebsocketHandler::WebsocketHandler(const std::string& name,
     const muduo::net::TcpConnectionPtr& conn)
-    : HTTPHandler(name, conn),
-      protocol_(kHTTP) {
+    : BaseHandler(name, conn),
+      protocol_(kHTTP),
+      http_handler_(name, conn) {
   ws_codec_.SetErrorCallback(
       boost::bind(&WebsocketHandler::HandleError, this));
   ws_codec_.SetMessageCallback(
       boost::bind(&WebsocketHandler::OnMessageComplete, this, _1));
+  http_handler_.SetRequestCompleteCallback(
+      boost::bind(&WebsocketHandler::OnRequestComplete, this, _1));
+  http_handler_.SetErrorCallback(
+      boost::bind(&WebsocketHandler::HandleError, this));
 }
 
 void WebsocketHandler::OnData(muduo::net::Buffer* buf) {
   if (GetProtocol() == kHTTP) {
-    HTTPHandler::OnData(buf);
+    http_handler_.OnData(buf);
     return;
   }
   // websocket protocol
@@ -41,19 +46,14 @@ void WebsocketHandler::OnData(muduo::net::Buffer* buf) {
     LOG_DEBUG << "readable bytes: " << buf->readableBytes();
   }
 }
-
-// You must override this method if you want to handle unupgrade request.
-void WebsocketHandler::HandleRequest(const HTTPRequest& req) {
-  LOG_INFO << "WebsocketHandler HandleRequest";
-  if(req.IsUpgrade()) {
-    LOG_INFO << "WebsocketHandler upgrade";
-    HandleUpgradeRequest(req);
-    return;
+ 
+void WebsocketHandler::HandleError() { 
+  if (error_callback_) {
+    error_callback_(
+        enable_shared_from_this<WebsocketHandler>::shared_from_this());
   }
-  // handle unupgrade request.
-  // override the method and add you code here.
 }
-
+ 
 void WebsocketHandler::HandleUpgradeRequest(const HTTPRequest& req) {
   if (req.GetMethod() != "GET") {
     // error
@@ -98,11 +98,15 @@ void WebsocketHandler::HandleUpgradeRequest(const HTTPRequest& req) {
       .AddHeader("Sec-WebSocket-Accept", accept_key)
       .SetStatus(101, "Switching Protocols");
   SetProtocol(kWebsocket);
-  HTTPHandler::SendResponse(resp);
+  http_handler_.SendResponse(resp);
 }
 
 void WebsocketHandler::OnMessageComplete(const WebsocketMessage& message) {
-  HandleWebsocket(message);
+  message_complete_callback_(shared_from_this(), message);
+}
+
+void WebsocketHandler::OnRequestComplete(const HTTPRequest& req) {
+  request_complete_callback_(shared_from_this(), req);
 }
 
 bool WebsocketHandler::SendWebsocketMessage(const WebsocketMessage& message) {

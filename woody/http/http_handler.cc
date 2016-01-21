@@ -41,7 +41,7 @@ void HTTPHandler::OnMessageBegin(HTTPCodec::StreamID id) { }
 
 void HTTPHandler::OnMessageComplete(HTTPCodec::StreamID id, HTTPRequest& info) {
   LOG_INFO << "HTTPHandler::OnMessageComplete []";
-  HandleRequest(info);
+  request_complete_callback_(info);
 }
 
 void HTTPHandler::FormatResponse(HTTPResponse& resp) {

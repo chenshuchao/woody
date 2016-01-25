@@ -1,6 +1,4 @@
 #include <muduo/base/Logging.h>
-#include <muduo/net/EventLoop.h>
-#include <muduo/net/InetAddress.h>
 
 #include <fstream>
 #include <boost/pointer_cast.hpp>
@@ -11,10 +9,9 @@ using namespace woody;
 
 class SimpleWebsocketServer : public WebsocketServer {
  public:
-  SimpleWebsocketServer(muduo::net::EventLoop& loop,
-                        int port,
+  SimpleWebsocketServer(int port,
                         const string& name)
-      : WebsocketServer(loop, port, name) {
+      : WebsocketServer(port, name) {
   }
   void HandleRequest(const WebsocketHandlerPtr& handler,
                      const HTTPRequest& req) {
@@ -49,10 +46,8 @@ class SimpleWebsocketServer : public WebsocketServer {
 
 int main() {
   muduo::Logger::setLogLevel(muduo::Logger::DEBUG);
-  muduo::net::EventLoop loop;
 
-  SimpleWebsocketServer server(loop, 5011, "simple_server");
+  SimpleWebsocketServer server(5011, "simple_server");
   server.Start();
-  loop.loop();
 }
 

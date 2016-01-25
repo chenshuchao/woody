@@ -2,7 +2,7 @@
 #define WOODY_WEBSOCKET_WEBSOCKETSERVER_H
 
 #include <boost/noncopyable.hpp>
-
+#include <muduo/net/EventLoop.h>
 #include "woody/tcp_server.h"
 #include "woody/http/http_handler.h"
 #include "woody/websocket/websocket_handler.h"
@@ -11,9 +11,7 @@ namespace woody {
 
 class WebsocketServer {
  public:
-  WebsocketServer(muduo::net::EventLoop &loop,
-             int port,
-             const std::string& name);
+  WebsocketServer(int port, const std::string& name);
   void Start();
   void Stop();
   void Bind();
@@ -39,6 +37,7 @@ class WebsocketServer {
   WebsocketHandlerPtr FindHandler(const muduo::net::TcpConnectionPtr& conn);
 
   std::string name_;
+  muduo::net::EventLoop loop_;
   muduo::net::TcpServer tcp_server_;
   std::map<std::string, WebsocketHandlerPtr> handler_map_;
 };

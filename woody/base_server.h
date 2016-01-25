@@ -2,6 +2,7 @@
 #define BASESERVER_H
 
 #include <boost/noncopyable.hpp>
+#include <muduo/net/EventLoop.h>
 
 #include "woody/tcp_server.h"
 #include "woody/base_handler.h"
@@ -9,8 +10,7 @@
 namespace woody {
 class BaseServer : boost::noncopyable {
  public:
-  BaseServer(muduo::net::EventLoop &loop,
-             int port,
+  BaseServer(int port,
              BaseHandlerFactory* factory,
              const std::string& name);
   void Start();
@@ -31,8 +31,9 @@ class BaseServer : boost::noncopyable {
   BaseHandlerPtr FindHandler(const muduo::net::TcpConnectionPtr& conn);
 
   std::string name_;
-  BaseHandlerFactoryPtr handler_factory_;
+  muduo::net::EventLoop loop_;
   muduo::net::TcpServer tcp_server_;
+  BaseHandlerFactoryPtr handler_factory_;
   std::map<std::string, BaseHandlerPtr> handler_map_;
 };
 

@@ -26,16 +26,8 @@ class BaseHandler {
     conn_->send(message.c_str(), message.size());
   }
 
-  /* TODO
-  virtual void SetErrorCallback(const ErrorCallback& cb) {
-    error_callback_ = cb;
-  }
-  virtual void HandleError() { 
-    if (error_callback_) {
-      error_callback_(shared_from_this());
-    }
-  }
-  */
+  virtual void SetErrorCallback(const ErrorCallback& cb) { }
+  virtual void HandleError() { }
 
  private:
   std::string name_;

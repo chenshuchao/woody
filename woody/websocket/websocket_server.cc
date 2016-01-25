@@ -9,10 +9,9 @@
 using namespace std;
 using namespace woody;
 
-WebsocketServer::WebsocketServer(muduo::net::EventLoop& loop,
-                       int port,
-                       const string& name)
-    : tcp_server_(&loop,
+WebsocketServer::WebsocketServer(int port, const string& name)
+    : loop_(),
+      tcp_server_(&loop_,
                   muduo::net::InetAddress(port),
                   convert_to_muduo(name),
                   muduo::net::TcpServer::kNoReusePort) {
@@ -25,6 +24,7 @@ WebsocketServer::WebsocketServer(muduo::net::EventLoop& loop,
 void WebsocketServer::Start() {
   LOG_INFO << "WebsocketServer::Start [" << name_ << "].";
   tcp_server_.start();
+  loop_.loop();
 }
 
 // TODO

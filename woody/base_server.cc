@@ -9,15 +9,15 @@
 using namespace std;
 using namespace woody;
 
-BaseServer::BaseServer(muduo::net::EventLoop& loop,
-                       int port,
+BaseServer::BaseServer(int port,
                        BaseHandlerFactory* factory,
                        const string& name)
-    : handler_factory_(factory),
-      tcp_server_(&loop,
+    : loop_(),
+      tcp_server_(&loop_,
                   muduo::net::InetAddress(port),
                   convert_to_muduo(name),
-                  muduo::net::TcpServer::kNoReusePort) {
+                  muduo::net::TcpServer::kNoReusePort),
+      handler_factory_(factory) {
   tcp_server_.setConnectionCallback(
       boost::bind(&BaseServer::OnCreateOrDestroyConnection, this, _1));
   tcp_server_.setMessageCallback(
@@ -27,6 +27,7 @@ BaseServer::BaseServer(muduo::net::EventLoop& loop,
 void BaseServer::Start() {
   LOG_INFO << "BaseServer::Start [" << name_ << "].";
   tcp_server_.start();
+  loop_.loop();
 }
 
 // TODO

@@ -47,14 +47,14 @@ class HTTPCodec {
 
   bool OnHeadersComplete();
 
+  bool OnBody(const char* buf, size_t len);
+
   bool OnMessageComplete();
 
   /* TODO delete?
   std::string GetHeaderName() { return cur_header_name_; }
   std::string GetHeaderValue() { return cur_header_value_; }
   */
-
-  std::string ConvertResponseToString(const HTTPResponse& resp) const;
 
   void SetMessageBeginCallback(const MessageBeginCallback& cb) {
     message_begin_callback_ = cb;

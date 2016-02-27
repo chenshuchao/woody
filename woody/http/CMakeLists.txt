@@ -3,6 +3,7 @@ SET(woody_http_SRCS
   http_handler.cc
   http_request.cc
   http_response.cc
+  http_server.cc
   )
 
 ADD_LIBRARY(woody_http ${woody_http_SRCS})

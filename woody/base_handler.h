@@ -10,28 +10,18 @@ class BaseHandler {
  public:
   typedef boost::shared_ptr<BaseHandler> BaseHandlerPtr;
   typedef boost::function<void (BaseHandlerPtr)> ErrorCallback;
-  BaseHandler(const std::string& name, 
-              const muduo::net::TcpConnectionPtr& conn)
-      : name_(name),
-        conn_(conn) {
-  }
+  BaseHandler() { }
   virtual ~BaseHandler() { }
 
-  virtual std::string GetName() const { return name_; }
-  muduo::net::TcpConnectionPtr GetConn() const { return conn_; }
-
-  virtual void OnData(muduo::net::Buffer* buf) = 0;
-
-  virtual void Send(std::string& message) {
-    conn_->send(message.c_str(), message.size());
+  virtual void ForceClose() {
   }
 
-  virtual void SetErrorCallback(const ErrorCallback& cb) { }
-  virtual void HandleError() { }
-
  private:
-  std::string name_;
-  muduo::net::TcpConnectionPtr conn_;
+  virtual void OnData(const muduo::net::TcpConnectionPtr& conn,
+                      muduo::net::Buffer* buf,
+                      muduo::Timestamp) = 0;
+  virtual void OnClose() = 0;
+
   //ErrorCallback error_callback_;
 };
 typedef boost::shared_ptr<BaseHandler> BaseHandlerPtr;

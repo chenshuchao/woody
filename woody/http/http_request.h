@@ -12,7 +12,10 @@ class HTTPRequest {
   void AddHeader(const std::string name, const std::string& value);
 
   // TODO return boolean
-  std::string GetHeader(const std::string& name) const;
+  bool GetHeader(const std::string& name, std::string& value) const;
+  bool GetGETParams(const std::string& name, std::string& value) const;
+
+  void ParseUrl();
 
   void SetMethod(const std::string& method);
 
@@ -22,9 +25,15 @@ class HTTPRequest {
 
   std::string GetUrl() const { return url_; }
 
+  void SetBody(const std::string& body) { body_ = body; }
+
+  std::string GetBody() const { return body_; }
+
   bool IsUpgrade() const { return is_upgrade_; }
 
   void SetUpgrade() { is_upgrade_ = true; }
+
+  void CleanUp();
 
  private:
   bool is_header_finished_;
@@ -35,7 +44,7 @@ class HTTPRequest {
   std::string url_;
   std::string version_;
   std::map<std::string, std::string> headers_map_;
-  std::map<std::string, std::string> method_get_map_;
+  std::map<std::string, std::string> method_get_params_;
   std::string body_;
 };
 

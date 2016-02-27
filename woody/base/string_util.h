@@ -9,6 +9,15 @@
 #include <muduo/base/StringPiece.h>
 
 namespace woody {
+
+inline bool IsStringBeginWith(const std::string& s, const std::string& p) {
+  return 0 == s.find(p);
+}
+
+inline bool IsStringEndWith(const std::string& s, const std::string& p) {
+  return s.find(p) == (s.size() - p.size());
+}
+
 inline std::string convert_to_std(muduo::string s) {
   return std::string(s.data(), s.size());
 }

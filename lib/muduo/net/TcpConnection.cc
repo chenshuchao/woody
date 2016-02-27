@@ -416,6 +416,13 @@ void TcpConnection::handleClose()
 
   TcpConnectionPtr guardThis(shared_from_this());
   connectionCallback_(guardThis);
+
+  // By chenshuchao begin.
+  if (closeCallbackWithoutThis_) {
+    closeCallbackWithoutThis_();
+  }
+  // By chenshuchao end.
+
   // must be the last line
   closeCallback_(guardThis);
 }

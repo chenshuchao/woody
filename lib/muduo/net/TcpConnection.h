@@ -105,9 +105,14 @@ class TcpConnection : boost::noncopyable,
   Buffer* outputBuffer()
   { return &outputBuffer_; }
 
+  // By chenshuchao begin.
   /// Internal use only.
   void setCloseCallback(const CloseCallback& cb)
   { closeCallback_ = cb; }
+ 
+  void setCloseCallbackWithoutThis(const CloseCallbackWithoutThis& cb)
+  { closeCallbackWithoutThis_ = cb; }
+  // By chenshuchao end.
 
   // called when TcpServer accepts a new connection
   void connectEstablished();   // should be called only once
@@ -144,6 +149,7 @@ class TcpConnection : boost::noncopyable,
   WriteCompleteCallback writeCompleteCallback_;
   HighWaterMarkCallback highWaterMarkCallback_;
   CloseCallback closeCallback_;
+  CloseCallbackWithoutThis closeCallbackWithoutThis_;
   size_t highWaterMark_;
   Buffer inputBuffer_;
   Buffer outputBuffer_; // FIXME: use list<Buffer> as output buffer.

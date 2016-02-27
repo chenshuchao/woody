@@ -9,13 +9,20 @@
 namespace woody {
 class WebsocketCodec {
  public:
-  typedef boost::function<void (const WebsocketMessage&)> MessageCallback;
+  typedef boost::function<void (const TextMessage&)> TextMessageCallback;
+  typedef boost::function<void (const BinaryMessage&)> BinaryMessageCallback;
+  typedef boost::function<void (const CloseMessage&)> CloseMessageCallback;
+  typedef boost::function<void (const PingMessage&)> PingMessageCallback;
+  typedef boost::function<void (const PongMessage&)> PongMessageCallback;
   typedef boost::function<void ()> ErrorCallback;
 
   WebsocketCodec();
 
   bool OnData(const std::string& data, size_t& parsed_bytes);
   bool ConvertFrameToString(const WebsocketFrame& frame, std::string& parsed_string);
+  bool ConvertMessageToFrame(const WebsocketMessage::MessageType type,
+                             const std::string data,
+                             WebsocketFrame& frame);
 
 /*
   void OnTextMessage(const WebsocketMessage& message)
@@ -25,9 +32,20 @@ class WebsocketCodec {
   void OnPingMessage(const PingControlMessage& message);
   void OnPongMessage(const PongControlMessage& message);
 */
-
-  void SetMessageCallback(const MessageCallback& cb) {
-    message_callback_ = cb;
+  void SetTextMessageCallback(const TextMessageCallback& cb) {
+    text_message_callback_ = cb;
+  }
+  void SetBinaryMessageCallback(const BinaryMessageCallback& cb) {
+    binary_message_callback_ = cb;
+  }
+  void SetCloseMessageCallback(const CloseMessageCallback& cb) {
+    close_message_callback_ = cb;
+  }
+  void SetPingMessageCallback(const PingMessageCallback& cb) {
+    ping_message_callback_ = cb;
+  }
+  void SetPongMessageCallback(const PongMessageCallback& cb) {
+    pong_message_callback_ = cb;
   }
   void SetErrorCallback(const ErrorCallback& cb) {
     error_callback_ = cb;
@@ -43,17 +61,19 @@ class WebsocketCodec {
   bool OnPongFrame(const WebsocketFrame& frame);
   bool HandleFrameBody(const WebsocketFrame& frame, std::string& handled_body);
 
-  void OnMessage(const WebsocketMessage& message) {
-    message_callback_(message);
-  }
-
   void OnCodecError(std::string reason);
 
   WebsocketParser parser_;
   bool is_expected_masking_;
   WebsocketMessage::MessageType cur_message_type_;
-  WebsocketMessage message_;
-  MessageCallback message_callback_;
+  TextMessage text_message_;
+  BinaryMessage binary_message_;
+
+  TextMessageCallback text_message_callback_;
+  BinaryMessageCallback binary_message_callback_;
+  CloseMessageCallback close_message_callback_;
+  PingMessageCallback ping_message_callback_;
+  PongMessageCallback pong_message_callback_;
   ErrorCallback error_callback_;
 };
 }

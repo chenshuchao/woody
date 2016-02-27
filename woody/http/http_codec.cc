@@ -27,7 +27,7 @@ void HTTPCodec::InitParserSettings() {
   kParserSettings.on_header_field = HTTPCodec::OnHeaderFieldCallback;
   kParserSettings.on_header_value = HTTPCodec::OnHeaderValueCallback;
   kParserSettings.on_headers_complete = HTTPCodec::OnHeadersCompleteCallback;
-  //kParserSettings.on_body = HTTPCodec::OnBodyCallback;
+  kParserSettings.on_body = HTTPCodec::OnBodyCallback;
   kParserSettings.on_message_complete = HTTPCodec::OnMessageCompleteCallback;
 // kParserSettings.on_chunk_header = HTTPCodec::OnChunkHeaderCallback;
  // kParserSettings.on_chunk_complete = HTTPCodec::OnChunkCompleteCallback;
@@ -52,7 +52,7 @@ size_t HTTPCodec::OnData(const string& data) {
 
 bool HTTPCodec::OnMessageBegin() {
   parseState_ = kParseHeaderBegin;
-  LOG_INFO << "HTTPCodec::OnMessageBegin [].";
+  //LOG_INFO << "HTTPCodec::OnMessageBegin [].";
   if (message_begin_callback_) {
     message_begin_callback_(cur_stream_id_);
   }
@@ -60,18 +60,18 @@ bool HTTPCodec::OnMessageBegin() {
 }
 
 bool HTTPCodec::OnUrl(const char* buf, size_t len) {
-  LOG_INFO << "HTTPCodec::OnUrl [" << name_<< "]."
-           << "len = " << len;
+  //LOG_INFO << "HTTPCodec::OnUrl [" << name_<< "]."
+  //         << "len = " << len;
   request_.SetUrl(string(buf, len));
   return true;
 }
 
 bool HTTPCodec::OnHeaderField(const char* buf, size_t len) {
-  LOG_INFO << "HTTPCodec::OnHeaderField";
+ // LOG_INFO << "HTTPCodec::OnHeaderField";
   if (parseState_ == kParseHeaderValue) {
-    LOG_INFO << "HTTPCodec::OnHeadersComplete [" << name_
-           << "] AddHeader - cur_header_name_: " << cur_header_name_
-           << ", cur_header_value_: " << cur_header_value_ << ".";
+    //LOG_INFO << "HTTPCodec::OnHeadersComplete [" << name_
+    //      << "] AddHeader - cur_header_name_: " << cur_header_name_
+    //       << ", cur_header_value_: " << cur_header_value_ << ".";
     request_.AddHeader(cur_header_name_, cur_header_value_);
     cur_header_name_.clear();
     cur_header_name_.append(buf, len);
@@ -80,13 +80,13 @@ bool HTTPCodec::OnHeaderField(const char* buf, size_t len) {
     cur_header_name_.append(buf, len);
   }
   parseState_ = kParseHeaderName;
-  LOG_INFO << "HTTPCodec::OnHeaderField [" << name_
-           << "] - cur_header_name_: " << cur_header_name_;
+ // LOG_INFO << "HTTPCodec::OnHeaderField [" << name_
+ //          << "] - cur_header_name_: " << cur_header_name_;
   return true;
 }
 
 bool HTTPCodec::OnHeaderValue(const char *buf, size_t len) {
-  LOG_INFO << "HTTPCodec::OnHeaderValue";
+  //LOG_INFO << "HTTPCodec::OnHeaderValue";
   if (parseState_ == kParseHeaderName) {
     cur_header_value_.clear();
     cur_header_value_.append(buf, len);
@@ -95,19 +95,20 @@ bool HTTPCodec::OnHeaderValue(const char *buf, size_t len) {
     cur_header_value_.append(buf, len);
   }
   parseState_ = kParseHeaderValue;
-  LOG_INFO << "HTTPCodec::OnHeaderValue [" << name_
-         << "] - cur_header_value_: " << cur_header_value_;
+  //LOG_INFO << "HTTPCodec::OnHeaderValue [" << name_
+  //       << "] - cur_header_value_: " << cur_header_value_;
   return true;
 }
 
 bool HTTPCodec::OnHeadersComplete() {
-  LOG_INFO << "HTTPCodec::OnHeadersComplete [" << name_
-           << "] AddHeader - cur_header_name_: " << cur_header_name_
-           << ", cur_header_value_: " << cur_header_value_ << ".";
+  //LOG_INFO << "HTTPCodec::OnHeadersComplete [" << name_
+  //         << "] AddHeader - cur_header_name_: " << cur_header_name_
+  //         << ", cur_header_value_: " << cur_header_value_ << ".";
   request_.AddHeader(cur_header_name_, cur_header_value_);
   is_headers_complete_ = true;
   string method(http_method_str(static_cast<http_method>(parser_.method)));
   request_.SetMethod(method);
+  request_.ParseUrl();
   if (parser_.upgrade == 1) {
     request_.SetUpgrade();
   }
@@ -117,10 +118,16 @@ bool HTTPCodec::OnHeadersComplete() {
   return true;
 }
 
+bool HTTPCodec::OnBody(const char* buf, size_t len) {
+  request_.SetBody(string(buf, len));
+  return true;
+}
+
 bool HTTPCodec::OnMessageComplete() {
-  LOG_INFO << "HTTPCodec::OnMessageComplete [" << name_ << "].";
+  //LOG_INFO << "HTTPCodec::OnMessageComplete [" << name_ << "].";
   if (message_complete_callback_) {
     message_complete_callback_(cur_stream_id_, request_);
+    request_.CleanUp();
   }
   return true;
 }
@@ -167,33 +174,20 @@ int HTTPCodec::OnHeadersCompleteCallback(http_parser *parser) {
   return 0;
 }
 
+int HTTPCodec::OnBodyCallback(http_parser *parser, const char* buf, size_t len) {
+  HTTPCodec* codec = static_cast<HTTPCodec*>(parser->data);
+  if (!codec->OnBody(buf, len)) {
+    return 1;
+  }
+  return 0;
+}
+
 int HTTPCodec::OnMessageCompleteCallback(http_parser *parser) {
   HTTPCodec* codec = static_cast<HTTPCodec*>(parser->data);
   if (!codec->OnMessageComplete()) {
     return 1;
   }
   return 0;
-}
-
-string HTTPCodec::ConvertResponseToString(const HTTPResponse& resp) const {
-  string first_line = "";
-  int status_code = resp.GetStatusCode();
-  string status_message = resp.GetStatusMessage();
-  first_line = "HTTP/1.1 " + int_to_string(status_code) + " " + status_message;
-  
-  string headers = "";
-  vector<string> name, value;
-  resp.GetAllHeaders(name, value);
-  for (int i = 0, len = name.size(); i < len; i ++) {
-    headers += name[i] + ": " + value[i] + "\r\n";
-  }
-
-  string body = resp.GetBody();
-
-  string message = first_line + "\r\n" +
-                   headers + "\r\n" +
-                   body;
-  return message;
 }
 
 void HTTPCodec::OnParseError(string what) {

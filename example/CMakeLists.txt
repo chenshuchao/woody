@@ -1,1 +1,1 @@
-ADD_SUBDIRECTORY(websocket)
+ADD_SUBDIRECTORY(http)

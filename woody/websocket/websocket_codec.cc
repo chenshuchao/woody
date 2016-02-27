@@ -3,6 +3,7 @@
 #include <boost/bind.hpp>
 #include <muduo/base/Logging.h>
 
+#include "woody/base/base_util.h"
 #include "woody/base/endian_util.h"
 #include "woody/websocket/websocket_frame.h"
 
@@ -70,6 +71,63 @@ bool WebsocketCodec::ConvertFrameToString(const WebsocketFrame &frame, string& p
   return true;
 }
 
+bool WebsocketCodec::ConvertMessageToFrame(
+    const WebsocketMessage::MessageType type,
+    const std::string data,
+    WebsocketFrame& frame) {
+  int fin = 1;
+  int rsv1 = 0;
+  int rsv2 = 0;
+  int rsv3 = 0;
+  int opcode = -1;
+  int mask = 0;  // Server must not send any masked frame to client.
+  switch (type) {
+      case WebsocketMessage::kNoneMessage: {
+      return false;
+    }
+      case WebsocketMessage::kTextMessage: {
+      opcode = OPCODE_TEXT;
+      break;
+    }
+      case WebsocketMessage::kBinaryMessage: {
+      opcode = OPCODE_BINARY;
+      break;
+    }
+      case WebsocketMessage::kCloseMessage: {
+      opcode = OPCODE_CLOSE;
+      break;
+    }
+      case WebsocketMessage::kPingMessage: {
+      opcode = OPCODE_PING;
+      break;
+    }
+      case WebsocketMessage::kPongMessage: {
+      opcode = OPCODE_PONG;
+      break;
+    }
+    default: {
+      assert(false);
+    }
+  }
+  uint32_t masking_key = 0;
+  string body = data;
+  if (mask && !body.empty()) {
+    unsigned char bytes[4];
+    for (int i = 0; i < 4; i ++) {
+      bytes[i] = GetRandomByte();
+    }
+    masking_key = NetworkToHost32(*(uint32_t*)&bytes);
+    body = WebsocketFrame::Mask(body, masking_key);
+  }
+  uint64_t payload_length = body.size();
+
+  frame.Reset(fin, rsv1, rsv2, rsv3, opcode,
+              mask, payload_length,
+              masking_key,
+              body);
+  return true;
+
+}
 void WebsocketCodec::OnParsedFrame(const WebsocketFrame& frame) {
   int opcode = frame.GetOpcode();
   switch (opcode) {
@@ -103,13 +161,23 @@ bool WebsocketCodec::OnContinuationFrame(const WebsocketFrame& frame) {
   if (cur_message_type_ == WebsocketMessage::kNoneMessage) {
     OnCodecError("Message not started yet.");
     return false;
+  } else if (cur_message_type_ == WebsocketMessage::kTextMessage) {
+    text_message_.Append(frame_body);
+    if (frame.GetFin() == 1) {
+      text_message_callback_(text_message_);
+      text_message_.CleanUp();
+    }
+  } else if (cur_message_type_ == WebsocketMessage::kBinaryMessage) {
+    binary_message_.Append(frame_body);
+    if (frame.GetFin() == 1) {
+      binary_message_callback_(binary_message_);
+      binary_message_.CleanUp();
+    }
+  } else {
+    // error
   }
-  message_.Append(frame_body);
-  if (frame.GetFin() == 1) {
-    OnMessage(message_);
-    message_.CleanUp();
-    cur_message_type_ = WebsocketMessage::kNoneMessage;
-  }
+
+  cur_message_type_ = WebsocketMessage::kNoneMessage;
   return true;
 }
 
@@ -125,11 +193,10 @@ bool WebsocketCodec::OnTextFrame(const WebsocketFrame& frame) {
     return false;
   }
   cur_message_type_ = WebsocketMessage::kTextMessage;
-  message_.SetType(WebsocketMessage::kTextMessage);
-  message_.Append(frame_body);
+  text_message_.Append(frame_body);
   if (frame.GetFin() == 1) {
-    OnMessage(message_);
-    message_.CleanUp();
+    text_message_callback_(text_message_);
+    text_message_.CleanUp();
     cur_message_type_ = WebsocketMessage::kNoneMessage;
   }
   return true;
@@ -147,11 +214,10 @@ bool WebsocketCodec::OnBinaryFrame(const WebsocketFrame& frame) {
     return false;
   }
   cur_message_type_ = WebsocketMessage::kBinaryMessage;
-  message_.SetType(WebsocketMessage::kBinaryMessage);
-  message_.Append(frame_body);
+  binary_message_.Append(frame_body);
   if (frame.GetFin() == 1) {
-    OnMessage(message_);
-    message_.CleanUp();
+    binary_message_callback_(binary_message_);
+    binary_message_.CleanUp();
     cur_message_type_ = WebsocketMessage::kNoneMessage;
   }
   return true;
@@ -164,9 +230,9 @@ bool WebsocketCodec::OnCloseFrame(const WebsocketFrame& frame) {
     return false;
   }
   LOG_DEBUG << "WebsocketCodec::OnCloseFrame - data: " << frame_body;
-  WebsocketMessage m(WebsocketMessage::kCloseMessage);
+  CloseMessage m;
   m.Append(frame_body);
-  OnMessage(m);
+  close_message_callback_(m);
   return true;
 }
 
@@ -177,8 +243,8 @@ bool WebsocketCodec::OnPingFrame(const WebsocketFrame& frame) {
     return false;
   }
   LOG_DEBUG << "WebsocketCodec::OnPingFrame - data: " << frame_body;
-  WebsocketMessage m(WebsocketMessage::kPingMessage);
-  OnMessage(m);
+  PingMessage m;
+  ping_message_callback_(m);
   return true;
 }
 
@@ -189,8 +255,8 @@ bool WebsocketCodec::OnPongFrame(const WebsocketFrame& frame) {
     return false;
   }
   LOG_DEBUG << "WebsocketCodec::OnPongFrame - data: " << frame_body;
-  WebsocketMessage m(WebsocketMessage::kPongMessage);
-  OnMessage(m);
+  PongMessage message;
+  pong_message_callback_(message);
   return true;
 }
 
@@ -220,5 +286,4 @@ void WebsocketCodec::OnCodecError(string reason) {
             << "error : " << reason;
   error_callback_();
 }
-
 

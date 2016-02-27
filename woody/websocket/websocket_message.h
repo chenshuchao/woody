@@ -25,9 +25,8 @@ class WebsocketMessage {
   void Append(std::string& data);
   void CleanUp();
   MessageType GetType() const { return type_; }
-  void SetType(MessageType type) { type_ = type; }
-
-  bool SingleFrame(WebsocketFrame& frame) const;
+//  void SetType(MessageType type) { type_ = type; }
+  std::string GetData() const { return data_; }
 
  private:
   MessageType type_;
@@ -36,7 +35,6 @@ class WebsocketMessage {
 };
 typedef boost::shared_ptr<WebsocketMessage> WebsocketMessagePtr;
 
-/*
 class TextMessage : public WebsocketMessage
 {
  public:
@@ -47,18 +45,16 @@ class BinaryMessage : public WebsocketMessage
 {
 };
 
-class CloseControlMessage : public WebsocketMessage
+class CloseMessage : public WebsocketMessage
 {
 };
-class PingControlMessage : public WebsocketMessage
-{
-
-};
-
-class PongControlMessage : public WebsocketMessage
+class PingMessage : public WebsocketMessage
 {
 
 };
-*/
+
+class PongMessage : public WebsocketMessage
+{
+};
 }
 #endif

@@ -1,27 +1,23 @@
-#include "woody/base/ssl_util.h"
+#ifndef BYTREE_SSLUTIL_H
+#define BYTREE_SSLUTIL_H
 
+#include <string>
 #include <boost/uuid/sha1.hpp>
-#include <iostream>
-#include <string.h>
 
+namespace bytree {
 using namespace std;
 
-static const std::string base64_chars = 
+static const string base64_chars = 
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
              "abcdefghijklmnopqrstuvwxyz"
              "0123456789+/";
 
-static inline bool is_base64(unsigned char c) {
+static inline bool IsBase64(unsigned char c) {
   return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string base64_encode(const string& message)
-{
-  return base64_encode((unsigned char*)message.c_str(), message.size());
-}
-
-std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
-  std::string ret;
+string Base64Encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
+  string ret;
   int i = 0;
   int j = 0;
   unsigned char char_array_3[3];
@@ -56,21 +52,24 @@ std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_
 
     while((i++ < 3))
       ret += '=';
-
   }
-
   return ret;
 }
 
-std::string base64_decode(std::string const& encoded_string) {
+string Base64Encode(const string& message)
+{
+  return Base64Encode((unsigned char*)message.c_str(), message.size());
+}
+
+string Base64Decode(string const& encoded_string) {
   int in_len = encoded_string.size();
   int i = 0;
   int j = 0;
   int in_ = 0;
   unsigned char char_array_4[4], char_array_3[3];
-  std::string ret;
+  string ret;
 
-  while (in_len-- && ( encoded_string[in_] != '=') && is_base64(encoded_string[in_])) {
+  while (in_len-- && ( encoded_string[in_] != '=') && IsBase64(encoded_string[in_])) {
     char_array_4[i++] = encoded_string[in_]; in_++;
     if (i ==4) {
       for (i = 0; i <4; i++)
@@ -99,18 +98,18 @@ std::string base64_decode(std::string const& encoded_string) {
 
     for (j = 0; (j < i - 1); j++) ret += char_array_3[j];
   }
-
   return ret;
 }
 
-void reverseBytes(int x, unsigned char* bytes, int index)
+void ReverseBytes(int x, unsigned char* bytes, int index)
 {
   bytes[index+0] = (x >> 24) & 0xFF;
   bytes[index+1] = (x >> 16) & 0xFF;
   bytes[index+2] = (x >> 8) & 0xFF;
   bytes[index+3] = x & 0xFF; 
 }
-string sha1(string buf)
+
+string Sha1(string buf)
 {
   unsigned int digest[5];
   boost::uuids::detail::sha1 boost_sha1;
@@ -118,10 +117,13 @@ string sha1(string buf)
   boost_sha1.get_digest(digest);
  
   unsigned char ch[20];
-  for (int i = 0; i < 5; i ++)
-    reverseBytes(digest[i], ch, i*4);
+  for (int i = 0; i < 5; i ++) {
+    ReverseBytes(digest[i], ch, i*4);
+  }
 
   string s((char*)&ch, 20);
   return s;
 }
+}
 
+#endif
